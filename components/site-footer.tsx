@@ -9,7 +9,7 @@ export function SiteFooter() {
   const L = (p: string) => `/${locale}${p}`;
 
   return (
-    <footer className="mt-20 border-t border-border/70 bg-white">
+    <footer className="mt-20 border-t border-border/70 bg-card">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-4">
         <div>
           <div className="flex items-center gap-2">
@@ -32,7 +32,7 @@ export function SiteFooter() {
           <p className="text-sm font-bold">{t.footer.forDoctors}</p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li><Link href={L('/dashboard/doctor')} className="hover:text-primary">{t.footer.doctorDash}</Link></li>
-            <li><Link href={L('/register')} className="hover:text-primary">{t.footer.joinDoctor}</Link></li>
+            <li><Link href={L('/register?type=doctor')} className="hover:text-primary">{t.footer.joinDoctor}</Link></li>
           </ul>
         </div>
         <div className="space-y-3 text-sm text-muted-foreground">

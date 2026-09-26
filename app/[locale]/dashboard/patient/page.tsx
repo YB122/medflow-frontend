@@ -286,7 +286,7 @@ function PatientDashboard() {
                                       disabled={!s.available || reschedule.isPending}
                                       onClick={() => reschedule.mutate({ id: a._id, start: s.start })}
                                       dir="ltr"
-                                      className={`rounded-md border px-1 py-1.5 text-xs font-bold transition-all ${s.available ? 'border-blue-200 bg-white hover:bg-primary hover:text-white' : 'bg-muted text-muted-foreground line-through'}`}
+                                      className={`rounded-md border px-1 py-1.5 text-xs font-bold transition-all ${s.available ? 'border-blue-200 bg-card hover:bg-primary hover:text-white dark:border-blue-800' : 'bg-muted text-muted-foreground line-through'}`}
                                     >
                                       {s.start}
                                     </button>

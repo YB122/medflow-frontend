@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import localFont from 'next/font/local';
 import { Inter } from 'next/font/google';
+import { ThemeProvider } from 'next-themes';
 import '../globals.css';
 import { Providers } from '../providers';
 import { SiteHeader } from '@/components/site-header';
@@ -64,18 +65,20 @@ export default async function LocaleLayout({
   const dict = getDictionary(locale);
 
   return (
-    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
+    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'} suppressHydrationWarning>
       <body
         className={`flex min-h-screen flex-col bg-background text-foreground ${
           locale === 'ar' ? arabicFont.className : latinFont.className
         }`}
       >
         <Providers>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <I18nProvider locale={locale} dict={dict}>
             <SiteHeader locale={locale} />
             <div className="flex-1">{children}</div>
             <SiteFooter />
           </I18nProvider>
+          </ThemeProvider>
         </Providers>
       </body>
     </html>

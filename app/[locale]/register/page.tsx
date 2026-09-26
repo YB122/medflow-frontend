@@ -1,11 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Mail, Smartphone, Lock, CircleAlert } from 'lucide-react';
+import { UserPlus, UserRound, Mail, Smartphone, Lock, CircleAlert, Stethoscope } from 'lucide-react';
 import { api, useAuth, dashboardPath } from '@/lib/store';
 import { AuthShell } from '@/components/auth-shell';
 import { Input } from '@/components/ui/input';
@@ -14,11 +14,20 @@ import { Button } from '@/components/ui/button';
 import { useT, useLocale } from '@/components/i18n-provider';
 
 type Mode = 'email' | 'phone';
+type AccountType = 'patient' | 'doctor';
 
 export default function RegisterPage() {
   const t = useT();
   const locale = useLocale();
   const [mode, setMode] = useState<Mode>('email');
+  const [accountType, setAccountType] = useState<AccountType>('patient');
+
+  // "Join as a doctor" CTAs link here with ?type=doctor → preselect the doctor tab.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('type') === 'doctor') {
+      setAccountType('doctor');
+    }
+  }, []);
 
   const schema = z.object({
     contact: z
@@ -53,6 +62,31 @@ export default function RegisterPage() {
       subtitle={t.auth.registerSub}
       footer={<>{t.auth.hasAccount}{' '}<Link href={`/${locale}/login`} className="font-bold text-primary hover:underline">{t.auth.loginBtn}</Link></>}
     >
+      {/* account type */}
+      <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+        {(
+          [
+            { v: 'patient', label: t.auth.accountPatient, icon: UserRound },
+            { v: 'doctor', label: t.auth.accountDoctor, icon: Stethoscope },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.v}
+            type="button"
+            onClick={() => setAccountType(tab.v)}
+            className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-bold transition-all ${
+              accountType === tab.v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <tab.icon className="size-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {accountType === 'doctor' && (
+        <p className="mb-3 rounded-lg bg-blue-50 p-2.5 text-xs leading-5 text-blue-900">{t.auth.doctorNote}</p>
+      )}
+
       {/* email / phone tabs */}
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
         {(
@@ -80,10 +114,11 @@ export default function RegisterPage() {
         onSubmit={handleSubmit(async (v) => {
           setServerError('');
           try {
-            const body =
+            const contact =
               mode === 'email'
-                ? { email: v.contact.trim(), password: v.password }
-                : { phone: v.contact.replace(/[\s\-()]/g, ''), password: v.password };
+                ? { email: v.contact.trim() }
+                : { phone: v.contact.replace(/[\s\-()]/g, '') };
+            const body = { ...contact, password: v.password, asDoctor: accountType === 'doctor' };
             const tokens = await api<{ accessToken: string; refreshToken: string }>('/auth/register', {
               method: 'POST',
               body: JSON.stringify(body),

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Segoe UI", Tahoma, "Helvetica Neue", Arial, system-ui, -apple-system, sans-serif;
 
@@ -37,6 +39,37 @@
 
   --animate-fade-up: fade-up 0.5s ease-out both;
   --animate-float: float 7s ease-in-out infinite;
+}
+
+/* Dark mode: same semantic tokens, night-navy palette. Toggled via `.dark` on <html> (next-themes). */
+.dark {
+  --color-background: #0b1220;
+  --color-foreground: #e6edf6;
+
+  --color-card: #111a2c;
+  --color-card-foreground: #e6edf6;
+
+  --color-popover: #111a2c;
+  --color-popover-foreground: #e6edf6;
+
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #f0f7ff;
+
+  --color-secondary: #1a2742;
+  --color-secondary-foreground: #c7d8f5;
+
+  --color-muted: #182234;
+  --color-muted-foreground: #8fa1b8;
+
+  --color-accent: #1c2c4e;
+  --color-accent-foreground: #dbe7fd;
+
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #fef2f2;
+
+  --color-border: #223148;
+  --color-input: #2b3c5c;
+  --color-ring: #3b82f6;
 }
 
 @keyframes fade-up {

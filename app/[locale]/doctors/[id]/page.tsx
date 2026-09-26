@@ -144,7 +144,7 @@ export default function DoctorProfile({ params }: { params: { locale: string; id
                         dir="ltr"
                         className={
                           s.available
-                            ? 'flex h-11 items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/60 text-sm font-bold text-blue-900 transition-all hover:border-primary hover:bg-primary hover:text-white hover:shadow-md hover:shadow-blue-900/20'
+                            ? 'flex h-11 items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/60 text-sm font-bold text-blue-900 transition-all hover:border-primary hover:bg-primary hover:text-white hover:shadow-md hover:shadow-blue-900/20 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100'
                             : 'flex h-11 cursor-not-allowed items-center justify-center rounded-lg bg-muted text-sm text-muted-foreground line-through'
                         }
                       >

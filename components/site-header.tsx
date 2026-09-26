@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Activity, LogOut, LayoutDashboard, Search, MessageCircle, Stethoscope, Languages } from 'lucide-react';
+import { Activity, LogOut, LayoutDashboard, Search, MessageCircle, Stethoscope, Languages, UserRound } from 'lucide-react';
 import { Button } from './ui/button';
+import { ThemeToggle } from './theme-toggle';
 import { useAuth, logout, dashboardPath } from '@/lib/store';
 import { useT, type Locale } from '@/components/i18n-provider';
 
@@ -20,10 +21,11 @@ export function SiteHeader({ locale }: { locale: Locale }) {
     { href: `/${locale}/doctors`, label: t.nav.doctors, icon: Search },
     ...(authed ? [{ href: dashboardPath(roles, locale), label: t.nav.dashboard, icon: LayoutDashboard }] : []),
     ...(authed ? [{ href: `/${locale}/chat`, label: t.nav.chat, icon: MessageCircle }] : []),
+    ...(authed ? [{ href: `/${locale}/profile`, label: t.nav.profile, icon: UserRound }] : []),
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-white/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link href={`/${locale}`} className="flex items-center gap-2.5">
           <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-blue-900/30">
@@ -44,6 +46,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
               </Button>
             </Link>
           ))}
+          <ThemeToggle />
           <Link href={switchHref} title={t.nav.langName}>
             <Button variant="outline" size="sm" dir="ltr">
               <Languages />

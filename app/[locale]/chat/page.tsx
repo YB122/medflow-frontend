@@ -142,7 +142,7 @@ function Chat() {
                     key={c._id}
                     onClick={() => open(c._id)}
                     dir="ltr"
-                    className={`flex w-full items-center gap-2.5 rounded-lg p-2.5 text-start transition-colors ${active === c._id ? 'bg-white shadow-sm ring-1 ring-blue-200' : 'hover:bg-white/70'}`}
+                    className={`flex w-full items-center gap-2.5 rounded-lg p-2.5 text-start transition-colors ${active === c._id ? 'bg-card shadow-sm ring-1 ring-blue-200 dark:ring-blue-800' : 'hover:bg-card/70'}`}
                   >
                     <span className="relative">
                       <Avatar className="size-9">
@@ -202,7 +202,7 @@ function Chat() {
                         className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm leading-6 shadow-sm ${
                           mine
                             ? 'rounded-br-md bg-primary text-primary-foreground'
-                            : 'rounded-bl-md border border-border/70 bg-white'
+                            : 'rounded-bl-md border border-border/70 bg-card'
                         }`}
                       >
                         {m.text}

@@ -78,7 +78,7 @@ export default function Home() {
                 ['+8.9k', t.home.statBookings],
                 ['4.8', t.home.statRating],
               ].map(([v, k]) => (
-                <div key={k} className="rounded-xl border border-border/70 bg-white/70 px-3 py-3 text-center backdrop-blur">
+                <div key={k} className="rounded-xl border border-border/70 bg-card/70 px-3 py-3 text-center backdrop-blur">
                   <dt className="sr-only">{k}</dt>
                   <dd className="text-2xl font-extrabold text-primary" dir="ltr">{v}</dd>
                   <dd className="mt-0.5 text-xs text-muted-foreground">{k}</dd>
@@ -235,7 +235,7 @@ export default function Home() {
                 ))}
               </ul>
               <div className="mt-1 flex gap-3">
-                <Link href={L('/register')}><Button>{t.home.clinicCtaJoin} <Arrow className="size-4" /></Button></Link>
+                <Link href={L('/register?type=doctor')}><Button>{t.home.clinicCtaJoin} <Arrow className="size-4" /></Button></Link>
                 <Link href={L('/dashboard/doctor')}><Button variant="outline">{t.home.clinicCtaTry}</Button></Link>
               </div>
             </CardContent>
@@ -262,7 +262,7 @@ export default function Home() {
         </Stagger>
 
         <FadeIn className="mt-10">
-          <Card className="relative overflow-hidden bg-blue-950 text-white">
+          <Card className="relative overflow-hidden border border-transparent bg-blue-950 text-white dark:border-blue-900">
             <div className="dot-grid absolute inset-0 opacity-20" />
             <CardContent className="relative flex flex-col items-center gap-4 p-10 text-center">
               <h2 className="text-2xl font-extrabold sm:text-3xl">{t.home.finalTitle}</h2>

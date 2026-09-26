@@ -1,17 +1,17 @@
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CalendarDays, Clock, Check, X, Plus, Trash2, Save,
   ClipboardList, Pill, CalendarClock, CircleCheck, Hourglass,
   MessageCircle, Stethoscope, ChevronRight, ChevronLeft,
-  Camera, Upload,
+  Camera, Upload, UserRound, Users, FilePlus2,
 } from 'lucide-react';
 import { api, uploadDoctorPhoto } from '@/lib/store';
-import { portraitFor } from '@/lib/doctors';
+import { portraitFor, initialsOf } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,7 @@ function DoctorDashboard() {
   const [photoError, setPhotoError] = useState('');
   const [apptStatus, setApptStatus] = useState('');
   const [apptPage, setApptPage] = useState(1);
+  const [tab, setTab] = useState('requests');
 
   const appts = useQuery({
     queryKey: ['mine', apptStatus, apptPage],
@@ -73,6 +74,15 @@ function DoctorDashboard() {
     queryFn: () => api<any>(`/doctors/${doctorId}`),
     enabled: !!doctorId,
   });
+  // Resolve the logged-in doctor's own profile so schedule/photo/notes just work.
+  const myProfile = useQuery({
+    queryKey: ['my-doctor-profile'],
+    queryFn: () => api<any>('/doctors/me'),
+  });
+  useEffect(() => {
+    const id = myProfile.data?._id;
+    if (id) setDoctorId((cur) => cur || id);
+  }, [myProfile.data]);
   const sched = useQuery({
     queryKey: ['sched', doctorId],
     queryFn: () => api<Window[]>(`/doctors/${doctorId}/schedule`),
@@ -85,8 +95,19 @@ function DoctorDashboard() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mine'] });
       qc.invalidateQueries({ queryKey: ['mine-stats'] });
+      qc.invalidateQueries({ queryKey: ['my-patients'] });
     },
   });
+  const patientsQ = useQuery({
+    queryKey: ['my-patients'],
+    queryFn: () => api<any[]>('/doctors/me/patients'),
+  });
+
+  /** Jump to the records tab with the patient prefilled for a new note. */
+  const addNoteFor = (patientId: string) => {
+    setNoteForm((f) => ({ ...f, patientId, appointmentId: '', diagnosis: '', notes: '' }));
+    setTab('records');
+  };
   const saveSchedule = useMutation({
     mutationFn: () =>
       api(`/doctors/${doctorId}/schedule`, { method: 'POST', body: JSON.stringify({ windows }) }),
@@ -169,6 +190,7 @@ function DoctorDashboard() {
                 </Badge>
               )}
               <Link href={L('/chat')}><Button className="bg-white text-blue-900 hover:bg-blue-50"><MessageCircle /> {t.doctor.chat}</Button></Link>
+              <Link href={L('/profile')}><Button className="bg-white/15 text-white hover:bg-white/25 hover:text-white"><UserRound /> {t.nav.profile}</Button></Link>
             </div>
           </CardContent>
         </Card>
@@ -240,12 +262,13 @@ function DoctorDashboard() {
         </Card>
       </motion.div>
 
-      <Tabs defaultValue="requests" className="mt-6">
+      <Tabs value={tab} onValueChange={setTab} className="mt-6">
         <TabsList>
           <TabsTrigger value="requests">
             <Hourglass /> {t.doctor.tabRequests}
             {pending.length > 0 && <Badge variant="destructive" className="px-1.5" dir="ltr">{pending.length}</Badge>}
           </TabsTrigger>
+          <TabsTrigger value="patients"><Users /> {t.doctor.tabPatients}</TabsTrigger>
           <TabsTrigger value="schedule"><CalendarClock /> {t.doctor.tabSchedule}</TabsTrigger>
           <TabsTrigger value="records"><ClipboardList /> {t.doctor.tabRecords}</TabsTrigger>
         </TabsList>
@@ -333,6 +356,67 @@ function DoctorDashboard() {
           )}
           <Pager page={apptPage} total={appts.data?.total ?? 0} limit={APPT_LIMIT} onChange={setApptPage} />
           {decide.isError && <p className="mt-3 text-sm font-semibold text-red-600">{t.doctor.actionErr}</p>}
+        </TabsContent>
+
+        {/* ---------- PATIENTS ---------- */}
+        <TabsContent value="patients">
+          {patientsQ.isLoading ? (
+            <div className="grid gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => (<Skeleton key={i} className="h-28" />))}</div>
+          ) : (patientsQ.data ?? []).length === 0 ? (
+            <Card className="p-10 text-center">
+              <Users className="mx-auto size-10 text-muted-foreground" />
+              <p className="mt-3 font-extrabold">{t.doctor.noPatients}</p>
+            </Card>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {(patientsQ.data ?? []).map((p: any) => (
+                <motion.div
+                  key={p.patientId}
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="size-11 rounded-xl">
+                          <AvatarFallback>{initialsOf(p.email ?? p.phone)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-extrabold" dir="ltr">
+                            {p.email ?? p.phone ?? p.patientId}
+                          </p>
+                          {p.email && p.phone && (
+                            <p className="truncate text-xs text-muted-foreground" dir="ltr">{p.phone}</p>
+                          )}
+                          <p className="mt-1.5 flex flex-wrap gap-1.5 text-[11px]">
+                            <Badge variant="secondary" dir="ltr">{p.total} {t.doctor.pVisits}</Badge>
+                            {p.upcoming > 0 && <Badge variant="info" dir="ltr">{p.upcoming} {t.doctor.pUpcoming}</Badge>}
+                            {p.completed > 0 && <Badge variant="success" dir="ltr">{p.completed} {t.doctor.pDone}</Badge>}
+                          </p>
+                          {p.lastVisit && (
+                            <p className="mt-1 text-[11px] text-muted-foreground" dir="ltr">
+                              {t.doctor.pLastVisit}: {p.lastVisit}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-3 flex gap-2 border-t border-border/70 pt-3">
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => addNoteFor(p.patientId)}>
+                          <FilePlus2 /> {t.doctor.pAddNote}
+                        </Button>
+                        <Link href={L('/chat')} className="flex-1">
+                          <Button size="sm" variant="ghost" className="w-full">
+                            <MessageCircle /> {t.doctor.pChat}
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* ---------- SCHEDULE ---------- */}
