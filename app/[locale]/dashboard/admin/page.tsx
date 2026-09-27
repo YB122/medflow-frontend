@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -53,6 +54,7 @@ export default function AdminDashboardPage() {
 
 function AdminDashboard() {
   const t = useT();
+  const locale = useLocale();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const USER_LIMIT = 20;
@@ -62,7 +64,7 @@ function AdminDashboard() {
   const monthly = useQuery({ queryKey: ['admin-monthly'], queryFn: () => api<any>('/admin/reports/monthly') });
   const top = useQuery({ queryKey: ['admin-top'], queryFn: () => api<any[]>('/admin/reports/top-doctors') });
   const users = useQuery({ queryKey: ['admin-users', page], queryFn: () => api<any>(`/users?page=${page}&limit=${USER_LIMIT}`) });
-  const doctors = useQuery({ queryKey: ['admin-doctors', docPage], queryFn: () => api<any>(`/doctors?page=${docPage}&limit=${DOC_LIMIT}`) });
+  const doctors = useQuery({ queryKey: ['admin-doctors', docPage], queryFn: () => api<any>(`/admin/doctors?page=${docPage}&limit=${DOC_LIMIT}`) });
 
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ['admin-dash'] });
@@ -207,15 +209,22 @@ function AdminDashboard() {
         <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="size-5 text-primary" /> {t.admin.verifyTitle}</CardTitle></CardHeader>
         <CardContent className="space-y-2">
           {(doctors.data?.items ?? []).map((d: any) => (
-            <div key={d._id} className="flex items-center gap-3 rounded-lg border border-border/60 p-2.5" dir="ltr">
-              <Avatar className="size-9">
-                <AvatarImage src={portraitFor(d._id, d.photoUrl)} alt="" />
-                <AvatarFallback className="text-[10px]">{initialsOf(d.bio)}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold">{d.bio || d._id}</p>
-                <p className="text-[11px] text-muted-foreground">{d.city} · ${d.price}</p>
-              </div>
+            <div key={d._id} className="flex items-center gap-3 rounded-lg border border-border/60 p-2.5 transition-colors hover:border-primary/50" dir="ltr">
+              <Link href={`/${locale}/doctors/${d._id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                <Avatar className="size-9">
+                  <AvatarImage src={portraitFor(d._id, d.photoUrl || d.userId?.photoUrl)} alt="" />
+                  <AvatarFallback className="text-[10px]">{initialsOf(d.bio)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold hover:text-primary">{d.bio || d.userId?.email || 'Doctor'}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {[d.userId?.email, d.userId?.phone].filter(Boolean).join(' · ') || '—'}
+                  </p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {[d.specialtyId?.name, d.city, d.price != null ? `$${d.price}` : null].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+              </Link>
               {d.verified ? (
                 <Badge variant="success" className="gap-1"><BadgeCheck className="size-3.5" /> {t.admin.verified}</Badge>
               ) : (
