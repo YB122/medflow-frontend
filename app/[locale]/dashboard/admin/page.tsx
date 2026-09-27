@@ -5,10 +5,10 @@ import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Stethoscope, Users, CalendarDays, Banknote,
-  UserX, UserCheck, ShieldCheck, BadgeCheck, Trophy, BarChart3, Plus, Check,
+  UserX, UserCheck, ShieldCheck, BadgeCheck, Trophy, BarChart3, Plus, Check, Pencil, X,
 } from 'lucide-react';
 import { api } from '@/lib/store';
-import { portraitFor, initialsOf, specName } from '@/lib/doctors';
+import { portraitFor, initialsOf, specName, specDesc } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +63,10 @@ function AdminDashboard() {
   const DOC_LIMIT = 10;
   const [specNameEn, setSpecNameEn] = useState('');
   const [specNameAr, setSpecNameAr] = useState('');
+  const [specDescEn, setSpecDescEn] = useState('');
+  const [specDescAr, setSpecDescAr] = useState('');
+  const [editingSpecId, setEditingSpecId] = useState<string | null>(null);
+  const [editSpec, setEditSpec] = useState({ name: '', nameAr: '', description: '', descriptionAr: '' });
   const dash = useQuery({ queryKey: ['admin-dash'], queryFn: () => api<any>('/admin/dashboard') });
   const monthly = useQuery({ queryKey: ['admin-monthly'], queryFn: () => api<any>('/admin/reports/monthly') });
   const top = useQuery({ queryKey: ['admin-top'], queryFn: () => api<any[]>('/admin/reports/top-doctors') });
@@ -94,11 +98,44 @@ function AdminDashboard() {
     mutationFn: () =>
       api('/specialties', {
         method: 'POST',
-        body: JSON.stringify({ name: specNameEn.trim(), nameAr: specNameAr.trim() }),
+        body: JSON.stringify({
+          name: specNameEn.trim(),
+          nameAr: specNameAr.trim(),
+          description: specDescEn.trim(),
+          descriptionAr: specDescAr.trim(),
+        }),
       }),
     onSuccess: () => {
       setSpecNameEn('');
       setSpecNameAr('');
+      setSpecDescEn('');
+      setSpecDescAr('');
+      qc.invalidateQueries({ queryKey: ['specs'] });
+      qc.invalidateQueries({ queryKey: ['admin-doctors'] });
+    },
+  });
+  const startEditSpec = (s: any) => {
+    setEditingSpecId(s._id);
+    setEditSpec({
+      name: s.name ?? '',
+      nameAr: s.nameAr ?? '',
+      description: s.description ?? '',
+      descriptionAr: s.descriptionAr ?? '',
+    });
+  };
+  const updateSpec = useMutation({
+    mutationFn: () =>
+      api(`/specialties/${editingSpecId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: editSpec.name.trim(),
+          nameAr: editSpec.nameAr.trim(),
+          description: editSpec.description.trim(),
+          descriptionAr: editSpec.descriptionAr.trim(),
+        }),
+      }),
+    onSuccess: () => {
+      setEditingSpecId(null);
       qc.invalidateQueries({ queryKey: ['specs'] });
       qc.invalidateQueries({ queryKey: ['admin-doctors'] });
     },
@@ -262,17 +299,44 @@ function AdminDashboard() {
           <p className="text-xs text-muted-foreground">{t.admin.specSub}</p>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-2">
             {(specs.data ?? []).map((s: any) => (
-              <Badge key={s._id} variant="secondary" dir="ltr">
-                {s.name}{s.nameAr ? ` · ${s.nameAr}` : ''}
-              </Badge>
+              <div key={s._id} className="rounded-lg border border-border/60 p-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold" dir="ltr">
+                      {s.name}{s.nameAr ? ` · ${s.nameAr}` : ''}
+                    </p>
+                    {specDesc(s, locale) && (
+                      <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">{specDesc(s, locale)}</p>
+                    )}
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => editingSpecId === s._id ? setEditingSpecId(null) : startEditSpec(s)}>
+                    {editingSpecId === s._id ? <X /> : <Pencil />}
+                    {editingSpecId === s._id ? t.admin.specCancel : t.admin.specEdit}
+                  </Button>
+                </div>
+                {editingSpecId === s._id && (
+                  <div className="mt-2.5 grid gap-2 border-t border-border/60 pt-2.5 sm:grid-cols-2">
+                    <Input value={editSpec.name} onChange={(e) => setEditSpec({ ...editSpec, name: e.target.value })} placeholder={t.admin.specPh} dir="ltr" />
+                    <Input value={editSpec.nameAr} onChange={(e) => setEditSpec({ ...editSpec, nameAr: e.target.value })} placeholder={t.admin.specPhAr} />
+                    <Input value={editSpec.description} onChange={(e) => setEditSpec({ ...editSpec, description: e.target.value })} placeholder={t.admin.specDescEn} dir="ltr" />
+                    <Input value={editSpec.descriptionAr} onChange={(e) => setEditSpec({ ...editSpec, descriptionAr: e.target.value })} placeholder={t.admin.specDescAr} />
+                    <div className="sm:col-span-2">
+                      <Button size="sm" disabled={!editSpec.name.trim() || updateSpec.isPending} onClick={() => updateSpec.mutate()}>
+                        <Check /> {t.admin.specSave}
+                      </Button>
+                      {updateSpec.isError && <span className="ms-2 text-xs font-bold text-red-600">{t.admin.specErr}</span>}
+                    </div>
+                  </div>
+                )}
+              </div>
             ))}
             {(specs.data ?? []).length === 0 && (
               <span className="text-xs text-muted-foreground">{t.admin.noData}</span>
             )}
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 grid gap-2 border-t border-border/60 pt-3 sm:grid-cols-2">
             <Input
               value={specNameEn}
               onChange={(e) => setSpecNameEn(e.target.value)}
@@ -285,6 +349,17 @@ function AdminDashboard() {
               onChange={(e) => setSpecNameAr(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && specNameEn.trim() && addSpec.mutate()}
               placeholder={t.admin.specPhAr}
+            />
+            <Input
+              value={specDescEn}
+              onChange={(e) => setSpecDescEn(e.target.value)}
+              placeholder={t.admin.specDescEn}
+              dir="ltr"
+            />
+            <Input
+              value={specDescAr}
+              onChange={(e) => setSpecDescAr(e.target.value)}
+              placeholder={t.admin.specDescAr}
             />
           </div>
           <div className="mt-2">

@@ -28,3 +28,10 @@ export function specName(s: any, locale: string): string {
   if (locale === 'ar' && s.nameAr) return s.nameAr;
   return s.name ?? '';
 }
+
+/** Localized specialty description (Arabic when available, English fallback). */
+export function specDesc(s: any, locale: string): string {
+  if (!s || typeof s === 'string') return '';
+  if (locale === 'ar' && s.descriptionAr) return s.descriptionAr;
+  return s.description ?? '';
+}
