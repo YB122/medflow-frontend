@@ -5,12 +5,13 @@ import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Stethoscope, Users, CalendarDays, Banknote,
-  UserX, UserCheck, ShieldCheck, BadgeCheck, Trophy, BarChart3,
+  UserX, UserCheck, ShieldCheck, BadgeCheck, Trophy, BarChart3, Plus, Check,
 } from 'lucide-react';
 import { api } from '@/lib/store';
 import { portraitFor, initialsOf } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,11 +61,13 @@ function AdminDashboard() {
   const USER_LIMIT = 20;
   const [docPage, setDocPage] = useState(1);
   const DOC_LIMIT = 10;
+  const [specName, setSpecName] = useState('');
   const dash = useQuery({ queryKey: ['admin-dash'], queryFn: () => api<any>('/admin/dashboard') });
   const monthly = useQuery({ queryKey: ['admin-monthly'], queryFn: () => api<any>('/admin/reports/monthly') });
   const top = useQuery({ queryKey: ['admin-top'], queryFn: () => api<any[]>('/admin/reports/top-doctors') });
   const users = useQuery({ queryKey: ['admin-users', page], queryFn: () => api<any>(`/users?page=${page}&limit=${USER_LIMIT}`) });
   const doctors = useQuery({ queryKey: ['admin-doctors', docPage], queryFn: () => api<any>(`/admin/doctors?page=${docPage}&limit=${DOC_LIMIT}`) });
+  const specs = useQuery({ queryKey: ['specs'], queryFn: () => api<any[]>('/specialties') });
 
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ['admin-dash'] });
@@ -85,6 +88,14 @@ function AdminDashboard() {
     mutationFn: ({ id, verified }: { id: string; verified: boolean }) =>
       api(`/doctors/${id}/verify`, { method: 'PATCH', body: JSON.stringify({ verified }) }),
     onSuccess: refreshAll,
+  });
+  const addSpec = useMutation({
+    mutationFn: () => api('/specialties', { method: 'POST', body: JSON.stringify({ name: specName.trim() }) }),
+    onSuccess: () => {
+      setSpecName('');
+      qc.invalidateQueries({ queryKey: ['specs'] });
+      qc.invalidateQueries({ queryKey: ['admin-doctors'] });
+    },
   });
 
   const cards = dash.data
@@ -236,6 +247,40 @@ function AdminDashboard() {
             </div>
           ))}
           <Pager page={docPage} total={doctors.data?.total ?? 0} limit={DOC_LIMIT} onChange={setDocPage} />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Stethoscope className="size-5 text-primary" /> {t.admin.specTitle}</CardTitle>
+          <p className="text-xs text-muted-foreground">{t.admin.specSub}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-1.5">
+            {(specs.data ?? []).map((s: any) => (
+              <Badge key={s._id} variant="secondary" dir="ltr">{s.name}</Badge>
+            ))}
+            {(specs.data ?? []).length === 0 && (
+              <span className="text-xs text-muted-foreground">{t.admin.noData}</span>
+            )}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Input
+              value={specName}
+              onChange={(e) => setSpecName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && specName.trim() && addSpec.mutate()}
+              placeholder={t.admin.specPh}
+            />
+            <Button disabled={!specName.trim() || addSpec.isPending} onClick={() => addSpec.mutate()} className="shrink-0">
+              <Plus /> {t.admin.specAdd}
+            </Button>
+          </div>
+          {addSpec.isSuccess && (
+            <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+              <Check className="size-4" /> {t.admin.specAdded}
+            </p>
+          )}
+          {addSpec.isError && <p className="mt-2 text-sm font-semibold text-red-600">{t.admin.specErr}</p>}
         </CardContent>
       </Card>
     </main>
