@@ -12,6 +12,7 @@ import { portraitFor, initialsOf } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -50,7 +51,7 @@ function Profile() {
 
   const meQ = useQuery({
     queryKey: ['me'],
-    queryFn: () => api<{ id: string; email: string | null; phone: string | null; photoUrl: string | null; roles: string[] }>('/auth/me'),
+    queryFn: () => api<{ id: string; email: string | null; phone: string | null; photoUrl: string | null; bio: string; roles: string[] }>('/auth/me'),
   });
   const myDocQ = useQuery({
     queryKey: ['my-doctor-profile'],
@@ -70,11 +71,15 @@ function Profile() {
 
   // ---------- account form ----------
   const [phone, setPhone] = useState<string | null>(null);
+  const [bio, setBio] = useState<string | null>(null);
   useEffect(() => {
     if (meQ.data && phone === null) setPhone(meQ.data.phone ?? '');
   }, [meQ.data, phone]);
-  const savePhone = useMutation({
-    mutationFn: () => api('/users/me', { method: 'PATCH', body: JSON.stringify({ phone }) }),
+  useEffect(() => {
+    if (meQ.data && bio === null) setBio(meQ.data.bio ?? '');
+  }, [meQ.data, bio]);
+  const saveAccount = useMutation({
+    mutationFn: () => api('/users/me', { method: 'PATCH', body: JSON.stringify({ phone, bio }) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
   });
 
@@ -187,6 +192,9 @@ function Profile() {
             )}
             <div className="min-w-0 flex-1">
               <p className="truncate font-extrabold" dir="ltr">{meQ.data?.email ?? meQ.data?.phone ?? '…'}</p>
+              {meQ.data?.bio && (
+                <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground" dir="ltr">{meQ.data.bio}</p>
+              )}
               <p className="mt-1 flex flex-wrap gap-1.5">
                 {(meQ.data?.roles ?? roles).map((r: string) => (
                   <Badge key={r} variant="secondary" dir="ltr">{r}</Badge>
@@ -227,26 +235,36 @@ function Profile() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-bold text-muted-foreground">{t.account.phoneLabel}</label>
-              <div className="flex gap-2">
-                <Input
-                  value={phone ?? ''}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder={t.auth.phonePh}
-                  dir="ltr"
-                  inputMode="tel"
-                />
-                <Button onClick={() => savePhone.mutate()} disabled={savePhone.isPending} className="shrink-0">
-                  <Save /> {t.account.save}
-                </Button>
-              </div>
+              <Input
+                value={phone ?? ''}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder={t.auth.phonePh}
+                dir="ltr"
+                inputMode="tel"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-bold text-muted-foreground">{t.account.aboutLabel}</label>
+              <Textarea
+                value={bio ?? ''}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder={t.account.aboutPh}
+                maxLength={500}
+                dir="ltr"
+              />
             </div>
           </CardContent>
-          {savePhone.isSuccess && (
+          <div className="px-6 pb-2">
+            <Button onClick={() => saveAccount.mutate()} disabled={saveAccount.isPending}>
+              <Save /> {t.account.save}
+            </Button>
+          </div>
+          {saveAccount.isSuccess && (
             <p className="flex items-center gap-1.5 px-6 pb-4 text-sm font-semibold text-emerald-700">
               <Check className="size-4" /> {t.account.savedOk}
             </p>
           )}
-          {savePhone.isError && (
+          {saveAccount.isError && (
             <p className="px-6 pb-4 text-sm font-semibold text-red-600">{t.account.saveErr}</p>
           )}
         </Card>

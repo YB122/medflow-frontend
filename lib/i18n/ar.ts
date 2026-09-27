@@ -223,6 +223,8 @@ const ar = {
     accountTitle: 'بيانات الحساب',
     emailLabel: 'الإيميل',
     phoneLabel: 'رقم الموبايل',
+    aboutLabel: 'نبذة عنك',
+    aboutPh: 'احكي عن نفسك…',
     rolesLabel: 'الأدوار',
     save: 'حفظ التغييرات',
     savedOk: 'اتحفظ بنجاح',

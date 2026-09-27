@@ -225,6 +225,8 @@ const en: Dict = {
     accountTitle: 'Account',
     emailLabel: 'Email',
     phoneLabel: 'Phone number',
+    aboutLabel: 'About you',
+    aboutPh: 'Tell us about yourself…',
     rolesLabel: 'Roles',
     save: 'Save changes',
     savedOk: 'Saved successfully',
