@@ -118,6 +118,25 @@ export async function logout() {
 }
 
 /**
+ * Upload the logged-in user's own profile photo (multipart, all roles).
+ */
+export async function uploadMyPhoto(file: File): Promise<any> {
+  const { accessToken } = useAuth.getState();
+  const form = new FormData();
+  form.append('photo', file);
+  const res = await fetch(`${API_URL}/users/me/photo`, {
+    method: 'POST',
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    body: form,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+/**
  * Upload a doctor profile photo (multipart). Note: no JSON content-type —
  * the browser sets the multipart boundary automatically.
  */

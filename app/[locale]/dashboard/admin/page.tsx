@@ -177,6 +177,7 @@ function AdminDashboard() {
           {(users.data?.items ?? []).map((u: any) => (
             <div key={u._id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-2.5" dir="ltr">
               <Avatar className="size-8">
+                <AvatarImage src={u.photoUrl} alt="" />
                 <AvatarFallback className="text-[10px]">{initialsOf(u.email)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">

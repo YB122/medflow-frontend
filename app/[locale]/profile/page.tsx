@@ -7,7 +7,7 @@ import {
   UserRound, Save, Check, Camera, Upload, MapPin, LocateFixed,
   Stethoscope, Wallet, Building2, CalendarDays,
 } from 'lucide-react';
-import { api, useAuth, uploadDoctorPhoto } from '@/lib/store';
+import { api, useAuth, uploadDoctorPhoto, uploadMyPhoto } from '@/lib/store';
 import { portraitFor, initialsOf } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,7 @@ function Profile() {
 
   const meQ = useQuery({
     queryKey: ['me'],
-    queryFn: () => api<{ id: string; email: string | null; phone: string | null; roles: string[] }>('/auth/me'),
+    queryFn: () => api<{ id: string; email: string | null; phone: string | null; photoUrl: string | null; roles: string[] }>('/auth/me'),
   });
   const myDocQ = useQuery({
     queryKey: ['my-doctor-profile'],
@@ -127,6 +127,31 @@ function Profile() {
     setPhotoPreview(URL.createObjectURL(f));
   };
 
+  // ---------- my account photo (all roles) ----------
+  const [myPhotoFile, setMyPhotoFile] = useState<File | null>(null);
+  const [myPhotoPreview, setMyPhotoPreview] = useState<string | null>(null);
+  const [myPhotoError, setMyPhotoError] = useState('');
+  const uploadMyPhotoMut = useMutation({
+    mutationFn: () => uploadMyPhoto(myPhotoFile!),
+    onSuccess: () => {
+      setMyPhotoFile(null);
+      setMyPhotoPreview(null);
+      setMyPhotoError('');
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: () => setMyPhotoError(t.doctor.photoErr),
+  });
+  const pickMyPhoto = (f: File | undefined) => {
+    setMyPhotoError('');
+    if (!f) return;
+    if (!f.type.startsWith('image/') || f.size > 5 * 1024 * 1024) {
+      setMyPhotoError(t.doctor.photoErr);
+      return;
+    }
+    setMyPhotoFile(f);
+    setMyPhotoPreview(URL.createObjectURL(f));
+  };
+
   const useMyLocation = () => {
     if (!navigator.geolocation || !docForm) return;
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -139,7 +164,7 @@ function Profile() {
   };
 
   const profileId = myDocQ.data?._id as string | undefined;
-  const avatarSrc = photoPreview ?? portraitFor(profileId, myDocQ.data?.photoUrl);
+  const avatarSrc = myPhotoPreview ?? meQ.data?.photoUrl ?? photoPreview ?? portraitFor(profileId, myDocQ.data?.photoUrl);
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -160,13 +185,30 @@ function Profile() {
                 <AvatarFallback className="text-lg">{initialsOf(meQ.data?.email)}</AvatarFallback>
               </Avatar>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate font-extrabold" dir="ltr">{meQ.data?.email ?? meQ.data?.phone ?? '…'}</p>
               <p className="mt-1 flex flex-wrap gap-1.5">
                 {(meQ.data?.roles ?? roles).map((r: string) => (
                   <Badge key={r} variant="secondary" dir="ltr">{r}</Badge>
                 ))}
               </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <label>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => pickMyPhoto(e.target.files?.[0])} />
+                  <Button variant="outline" size="sm" asChild>
+                    <span className="cursor-pointer"><Camera /> {t.doctor.photoPick}</span>
+                  </Button>
+                </label>
+                {myPhotoFile && (
+                  <Button size="sm" disabled={uploadMyPhotoMut.isPending} onClick={() => uploadMyPhotoMut.mutate()}>
+                    <Upload /> {uploadMyPhotoMut.isPending ? '…' : t.doctor.photoUpload}
+                  </Button>
+                )}
+                {uploadMyPhotoMut.isSuccess && (
+                  <span className="text-xs font-bold text-emerald-700">{t.doctor.photoOk}</span>
+                )}
+                {myPhotoError && <span className="text-xs font-bold text-red-600">{myPhotoError}</span>}
+              </div>
             </div>
           </CardContent>
         </Card>
