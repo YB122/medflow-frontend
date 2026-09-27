@@ -7,6 +7,7 @@ const ar = {
     perVisit: '/ زيارة',
     doctors: 'طبيب',
     backendDown: 'مش قادر أوصل للـ backend — تأكد إنه شغال على localhost:3000',
+    retry: 'إعادة المحاولة',
     prev: 'السابق',
     next: 'التالي',
     pageWord: 'صفحة',

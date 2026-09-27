@@ -68,10 +68,19 @@ function Detail({ id }: { id: string }) {
           <Skeleton className="h-32" />
           <Skeleton className="h-32" />
         </div>
+      ) : q.isError ? (
+        <Card className="mt-4 p-10 text-center">
+          <ShieldCheck className="mx-auto size-10 text-muted-foreground" />
+          <p className="mt-3 font-extrabold">{t.common.backendDown}</p>
+          <Button className="mt-4" onClick={() => q.refetch()}>{t.common.retry}</Button>
+        </Card>
       ) : !d ? (
         <Card className="mt-4 p-10 text-center">
           <ShieldCheck className="mx-auto size-10 text-muted-foreground" />
-          <p className="mt-3 font-extrabold">404</p>
+          <p className="mt-3 font-extrabold" dir="ltr">404 — doctor not found</p>
+          <Link href={L('/dashboard/admin')}>
+            <Button variant="outline" size="sm" className="mt-4"><Back /> {t.admin.back}</Button>
+          </Link>
         </Card>
       ) : (
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>

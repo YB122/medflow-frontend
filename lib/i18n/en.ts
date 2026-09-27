@@ -9,6 +9,7 @@ const en: Dict = {
     perVisit: '/ visit',
     doctors: 'doctors',
     backendDown: 'Cannot reach the backend — make sure it runs on localhost:3000',
+    retry: 'Retry',
     prev: 'Prev',
     next: 'Next',
     pageWord: 'Page',
