@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { io, Socket } from 'socket.io-client';
 import { useQuery, useQueries } from '@tanstack/react-query';
-import { Send, Plus, MessageCircle, CheckCheck, History, Stethoscope, Users } from 'lucide-react';
+import { Send, Plus, MessageCircle, CheckCheck, History, Stethoscope, Users, Search } from 'lucide-react';
 import { api, useAuth, API_URL } from '@/lib/store';
 import { portraitFor, initialsOf } from '@/lib/doctors';
 import { Card } from '@/components/ui/card';
@@ -39,6 +39,9 @@ function Chat() {
   const [typing, setTyping] = useState(false);
   const [peer, setPeer] = useState('');
   const [peerError, setPeerError] = useState('');
+  const [docQuery, setDocQuery] = useState('');
+  const [debouncedDocQ, setDebouncedDocQ] = useState('');
+  const [patFilter, setPatFilter] = useState('');
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [msgPage, setMsgPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -97,6 +100,24 @@ function Chat() {
       queryFn: () => api<any>(`/doctors/${id}`),
       staleTime: 60_000,
     })),
+  });
+
+  // Debounced doctor-name search (patients). Fires only on 2+ chars.
+  useEffect(() => {
+    const h = setTimeout(() => setDebouncedDocQ(docQuery.trim()), 400);
+    return () => clearTimeout(h);
+  }, [docQuery]);
+  const doctorSearchQ = useQuery({
+    queryKey: ['chat-doctor-search', debouncedDocQ],
+    queryFn: () => api<{ items: any[] }>(`/doctors?q=${encodeURIComponent(debouncedDocQ)}&limit=6`),
+    enabled: !iAmDoctor && debouncedDocQ.length >= 2,
+  });
+
+  // Doctor-side patient filter (client-side over their own patient list).
+  const filteredPatients = (patientsQ.data ?? []).filter((p: any) => {
+    const q = patFilter.trim().toLowerCase();
+    if (!q) return true;
+    return (p.email ?? '').toLowerCase().includes(q) || (p.phone ?? '').includes(q);
   });
 
   const open = async (id: string) => {
@@ -182,32 +203,54 @@ function Chat() {
               {t.chat.newChat}
             </p>
 
-            {/* one-tap quick lists */}
+            {/* doctors: search their own patients by name/email */}
             {iAmDoctor && (
-              <div className="mt-2 max-h-44 space-y-1 overflow-auto">
-                {(patientsQ.data ?? []).map((p: any) => (
-                  <div key={p.patientId} className="flex items-center gap-2 rounded-lg bg-card p-1.5" dir="ltr">
-                    <Avatar className="size-7">
-                      <AvatarFallback className="text-[9px]">{initialsOf(p.email ?? p.phone)}</AvatarFallback>
-                    </Avatar>
-                    <span className="min-w-0 flex-1 truncate text-xs font-bold">{p.email ?? p.phone ?? p.patientId}</span>
-                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => createConv(p.patientId, 'patient')}>
-                      {t.chat.startBtn}
-                    </Button>
-                  </div>
-                ))}
-                {(patientsQ.data ?? []).length === 0 && (
-                  <p className="p-2 text-[11px] text-muted-foreground">{t.doctor.noPatients}</p>
-                )}
-              </div>
+              <>
+                <div className="relative mt-2">
+                  <Search className="absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={patFilter}
+                    onChange={(e) => setPatFilter(e.target.value)}
+                    placeholder={t.chat.searchPatients}
+                    className="h-9 ps-8 text-xs"
+                  />
+                </div>
+                <div className="mt-2 max-h-44 space-y-1 overflow-auto">
+                  {filteredPatients.map((p: any) => (
+                    <div key={p.patientId} className="flex items-center gap-2 rounded-lg bg-card p-1.5" dir="ltr">
+                      <Avatar className="size-7">
+                        <AvatarFallback className="text-[9px]">{initialsOf(p.email ?? p.phone)}</AvatarFallback>
+                      </Avatar>
+                      <span className="min-w-0 flex-1 truncate text-xs font-bold">{p.email ?? p.phone ?? p.patientId}</span>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => createConv(p.patientId, 'patient')}>
+                        {t.chat.startBtn}
+                      </Button>
+                    </div>
+                  ))}
+                  {filteredPatients.length === 0 && (
+                    <p className="p-2 text-[11px] text-muted-foreground">
+                      {patFilter.trim() ? t.chat.noResults : t.doctor.noPatients}
+                    </p>
+                  )}
+                </div>
+              </>
             )}
-            {iAmPatientOnly && (
-              <div className="mt-2 max-h-44 space-y-1 overflow-auto">
-                {doctorProfiles.map((dq: any, i: number) => {
-                  const d = dq.data;
-                  if (!d) return null;
-                  return (
-                    <div key={doctorIds[i]} className="flex items-center gap-2 rounded-lg bg-card p-1.5" dir="ltr">
+
+            {/* patients: search doctors by name (recent doctors when empty) */}
+            {!iAmDoctor && (
+              <>
+                <div className="relative mt-2">
+                  <Search className="absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={docQuery}
+                    onChange={(e) => setDocQuery(e.target.value)}
+                    placeholder={t.chat.searchDoctors}
+                    className="h-9 ps-8 text-xs"
+                  />
+                </div>
+                <div className="mt-2 max-h-44 space-y-1 overflow-auto">
+                  {(debouncedDocQ.length >= 2 ? (doctorSearchQ.data?.items ?? []) : []).map((d: any) => (
+                    <div key={d._id} className="flex items-center gap-2 rounded-lg bg-card p-1.5" dir="ltr">
                       <Avatar className="size-7">
                         <AvatarImage src={portraitFor(d._id, d.photoUrl)} alt="" />
                         <AvatarFallback className="text-[9px]">{initialsOf(d.bio)}</AvatarFallback>
@@ -217,17 +260,40 @@ function Chat() {
                         {t.chat.startBtn}
                       </Button>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                  {debouncedDocQ.length >= 2 && (doctorSearchQ.data?.items ?? []).length === 0 && !doctorSearchQ.isLoading && (
+                    <p className="p-2 text-[11px] text-muted-foreground">{t.chat.noResults}</p>
+                  )}
+                  {debouncedDocQ.length < 2 && iAmPatientOnly && doctorProfiles.map((dq: any, i: number) => {
+                    const d = dq.data;
+                    if (!d) return null;
+                    return (
+                      <div key={doctorIds[i]} className="flex items-center gap-2 rounded-lg bg-card p-1.5" dir="ltr">
+                        <Avatar className="size-7">
+                          <AvatarImage src={portraitFor(d._id, d.photoUrl)} alt="" />
+                          <AvatarFallback className="text-[9px]">{initialsOf(d.bio)}</AvatarFallback>
+                        </Avatar>
+                        <span className="min-w-0 flex-1 truncate text-xs font-bold">{d.bio || 'Doctor'}</span>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => createConv(d._id, 'doctor')}>
+                          {t.chat.startBtn}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
 
-            {/* manual id fallback (profile or user id — backend resolves both) */}
-            <div className="mt-2 flex gap-1.5" dir="ltr">
-              <Input value={peer} onChange={(e) => setPeer(e.target.value)} placeholder={t.chat.newConvPh} className="h-9 font-mono text-xs" />
-              <Button size="icon" onClick={createManual} className="shrink-0"><Plus /></Button>
-            </div>
-            {peerError && <p className="mt-1 px-1 text-[11px] font-semibold text-red-600">{peerError}</p>}
+            {/* manual id fallback (admins/staff) — profile or user id, backend resolves both */}
+            {!iAmDoctor && !iAmPatientOnly && (
+              <>
+                <div className="mt-2 flex gap-1.5" dir="ltr">
+                  <Input value={peer} onChange={(e) => setPeer(e.target.value)} placeholder={t.chat.newConvPh} className="h-9 font-mono text-xs" />
+                  <Button size="icon" onClick={createManual} className="shrink-0"><Plus /></Button>
+                </div>
+                {peerError && <p className="mt-1 px-1 text-[11px] font-semibold text-red-600">{peerError}</p>}
+              </>
+            )}
 
             <div className="mt-2 max-h-72 space-y-1 overflow-auto border-t border-border/60 pt-2 md:max-h-[420px]">
               {convs.map((c: any) => {
