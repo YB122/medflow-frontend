@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -18,9 +18,9 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useT } from '@/components/i18n-provider';
 
-export default function DoctorProfile({ params }: { params: { locale: string; id: string } }) {
+export default function DoctorProfile({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const t = useT();
-  const { id } = params;
+  const { id } = use(params);
   const qc = useQueryClient();
   const roles = useAuth((s) => s.roles);
   const today = new Date().toISOString().slice(0, 10);

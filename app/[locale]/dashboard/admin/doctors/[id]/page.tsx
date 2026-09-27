@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { use } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -19,10 +20,11 @@ import { useT, useLocale } from '@/components/i18n-provider';
 
 const APPT_STATUSES = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'REJECTED'];
 
-export default function AdminDoctorDetailPage({ params }: { params: { locale: string; id: string } }) {
+export default function AdminDoctorDetailPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
+  const { id } = use(params);
   return (
     <RequireRole allow={['ADMIN', 'SUPER_ADMIN']}>
-      <Detail id={params.id} />
+      <Detail id={id} />
     </RequireRole>
   );
 }
