@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   MapPin, Star, BadgeCheck, CalendarDays, Clock, Wallet,
-  CheckCircle2, XCircle, Send, MessageSquareHeart, ClipboardList,
+  CheckCircle2, XCircle, Send, MessageSquareHeart, ClipboardList, Award,
 } from 'lucide-react';
 import { api, useAuth } from '@/lib/store';
 import { portraitFor, initialsOf } from '@/lib/doctors';
@@ -93,6 +93,11 @@ export default function DoctorProfile({ params }: { params: { locale: string; id
                     <Wallet className="size-4" /> ${d.price ?? '—'} {t.common.perVisit}
                   </span>
                   {d.specialtyId?.name && <Badge variant="secondary">{d.specialtyId.name}</Badge>}
+                  {d.yearsOfExperience != null && (
+                    <span className="flex items-center gap-1 font-semibold text-foreground" dir="ltr">
+                      <Award className="size-4 text-primary" /> {d.yearsOfExperience} {t.profile.expSuffix}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

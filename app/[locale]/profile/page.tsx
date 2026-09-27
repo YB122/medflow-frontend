@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   UserRound, Save, Check, Camera, Upload, MapPin, LocateFixed,
-  Stethoscope, Wallet, Building2, CalendarDays,
+  Stethoscope, Wallet, Building2, CalendarDays, Award,
 } from 'lucide-react';
 import { api, useAuth, uploadDoctorPhoto, uploadMyPhoto } from '@/lib/store';
 import { portraitFor, initialsOf } from '@/lib/doctors';
@@ -30,6 +30,7 @@ type DocForm = {
   bio: string;
   city: string;
   price: string;
+  expYears: string;
   specialtyId: string;
   lat: number | null;
   lng: number | null;
@@ -92,6 +93,7 @@ function Profile() {
         bio: d.bio ?? '',
         city: d.city ?? '',
         price: d.price != null ? String(d.price) : '',
+        expYears: d.yearsOfExperience != null ? String(d.yearsOfExperience) : '',
         specialtyId: typeof d.specialtyId === 'object' ? d.specialtyId?._id ?? '' : (d.specialtyId ?? ''),
         lat: d.lat ?? null,
         lng: d.lng ?? null,
@@ -107,6 +109,7 @@ function Profile() {
           bio: docForm!.bio,
           city: docForm!.city,
           price: Math.max(0, Number(docForm!.price) || 0),
+          yearsOfExperience: Math.min(80, Math.max(0, Number(docForm!.expYears) || 0)),
           specialtyId: docForm!.specialtyId || undefined,
           lat: docForm!.lat,
           lng: docForm!.lng,
@@ -342,13 +345,26 @@ function Profile() {
                           />
                         </div>
                       </div>
-                      <div className="sm:col-span-2">
+                      <div>
                         <label className="mb-1 block text-xs font-bold text-muted-foreground">{t.account.cityLabel}</label>
                         <div className="relative">
                           <Building2 className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
                             value={docForm.city}
                             onChange={(e) => setDocForm({ ...docForm, city: e.target.value })}
+                            className="ps-9"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-bold text-muted-foreground">{t.account.expLabel}</label>
+                        <div className="relative">
+                          <Award className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={docForm.expYears}
+                            onChange={(e) => setDocForm({ ...docForm, expYears: e.target.value.replace(/[^0-9]/g, '').slice(0, 2) })}
+                            inputMode="numeric"
+                            dir="ltr"
                             className="ps-9"
                           />
                         </div>

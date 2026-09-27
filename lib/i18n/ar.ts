@@ -105,6 +105,7 @@ const ar = {
   },
   profile: {
     verifiedDoctor: 'طبيب موثّق',
+    expSuffix: 'سنين خبرة',
     weeklySchedule: 'جدول العمل الأسبوعي',
     bookTitle: 'احجز معادك',
     bookSubChosen: 'معاد متاح في اليوم المختار',
@@ -121,8 +122,7 @@ const ar = {
     ratedOk: 'شكراً! تقييمك اتسجّل ✅',
     ratedErr: 'فشل التقييم ❌',
     reviewsTitle: 'آراء المرضى',
-    noReviews: 'لسه مفيش تقييمات — كن أول من يقيّم',
-  },
+    noReviews: 'لسه مفيش تقييمات — كن أول من يقيّم',  },
   patient: {
     greeting: 'أهلاً بيك',
     title: 'لوحة المريض',
@@ -236,6 +236,7 @@ const ar = {
     noSpecialty: 'بدون تخصص',
     priceLabel: 'سعر الكشف ($)',
     cityLabel: 'المدينة',
+    expLabel: 'سنين الخبرة',
     locationTitle: 'موقع العيادة على الخريطة',
     locationHint: 'دوس على الخريطة لتحديد مكان العيادة',
     useMyLocation: 'مكاني الحالي',

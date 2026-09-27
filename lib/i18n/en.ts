@@ -107,6 +107,7 @@ const en: Dict = {
   },
   profile: {
     verifiedDoctor: 'Verified doctor',
+    expSuffix: 'yrs experience',
     weeklySchedule: 'Weekly working hours',
     bookTitle: 'Book your slot',
     bookSubChosen: 'free slots on the selected day',
@@ -238,6 +239,7 @@ const en: Dict = {
     noSpecialty: 'No specialty',
     priceLabel: 'Visit price ($)',
     cityLabel: 'City',
+    expLabel: 'Years of experience',
     locationTitle: 'Clinic location on map',
     locationHint: 'Click the map to set the clinic location',
     useMyLocation: 'Use my location',
