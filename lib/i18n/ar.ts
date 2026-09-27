@@ -264,6 +264,7 @@ const ar = {
     makeDoctor: '+doctor',
     makeAdmin: '+admin',
     verifyTitle: 'توثيق الأطباء',
+    back: 'رجوع للوحة الإدارة',
     verified: 'verified',
     unverified: 'unverified',
     verify: 'verify',

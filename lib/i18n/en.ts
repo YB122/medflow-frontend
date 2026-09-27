@@ -267,6 +267,7 @@ const en: Dict = {
     makeDoctor: '+doctor',
     makeAdmin: '+admin',
     verifyTitle: 'Doctor verification',
+    back: 'Back to dashboard',
     verified: 'verified',
     unverified: 'unverified',
     verify: 'verify',

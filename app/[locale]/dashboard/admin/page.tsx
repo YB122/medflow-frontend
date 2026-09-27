@@ -210,7 +210,7 @@ function AdminDashboard() {
         <CardContent className="space-y-2">
           {(doctors.data?.items ?? []).map((d: any) => (
             <div key={d._id} className="flex items-center gap-3 rounded-lg border border-border/60 p-2.5 transition-colors hover:border-primary/50" dir="ltr">
-              <Link href={`/${locale}/doctors/${d._id}`} className="flex min-w-0 flex-1 items-center gap-3">
+              <Link href={`/${locale}/dashboard/admin/doctors/${d._id}`} className="flex min-w-0 flex-1 items-center gap-3">
                 <Avatar className="size-9">
                   <AvatarImage src={portraitFor(d._id, d.photoUrl || d.userId?.photoUrl)} alt="" />
                   <AvatarFallback className="text-[10px]">{initialsOf(d.bio)}</AvatarFallback>
