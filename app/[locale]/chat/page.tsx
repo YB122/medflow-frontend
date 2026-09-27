@@ -2,15 +2,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { io, Socket } from 'socket.io-client';
-import { Send, Plus, MessageCircle, CheckCheck, History } from 'lucide-react';
+import { useQuery, useQueries } from '@tanstack/react-query';
+import { Send, Plus, MessageCircle, CheckCheck, History, Stethoscope, Users } from 'lucide-react';
 import { api, useAuth, API_URL } from '@/lib/store';
+import { portraitFor, initialsOf } from '@/lib/doctors';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { RequireRole } from '@/components/require-role';
 import { useT } from '@/components/i18n-provider';
+
+const MSG_LIMIT = 50;
 
 export default function ChatPage() {
   return (
@@ -23,6 +27,10 @@ export default function ChatPage() {
 function Chat() {
   const t = useT();
   const token = useAuth((s) => s.accessToken);
+  const roles = useAuth((s) => s.roles);
+  const iAmDoctor = roles.includes('DOCTOR');
+  const iAmPatientOnly = roles.includes('PATIENT') && !iAmDoctor;
+
   const [socket, setSocket] = useState<Socket | null>(null);
   const [convs, setConvs] = useState<any[]>([]);
   const [active, setActive] = useState<string | null>(null);
@@ -30,11 +38,11 @@ function Chat() {
   const [text, setText] = useState('');
   const [typing, setTyping] = useState(false);
   const [peer, setPeer] = useState('');
+  const [peerError, setPeerError] = useState('');
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [msgPage, setMsgPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const MSG_LIMIT = 50;
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,6 +76,29 @@ function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs, typing]);
 
+  // ---------- quick-start lists ----------
+  // Doctor → their patients (user ids, ready to chat). Patient → their doctors.
+  const patientsQ = useQuery({
+    queryKey: ['my-patients'],
+    queryFn: () => api<any[]>('/doctors/me/patients'),
+    enabled: iAmDoctor,
+  });
+  const apptsQ = useQuery({
+    queryKey: ['mine-chat'],
+    queryFn: () => api<{ items: any[] }>('/appointments/mine?limit=100'),
+    enabled: iAmPatientOnly,
+  });
+  const doctorIds = iAmPatientOnly
+    ? [...new Set((apptsQ.data?.items ?? []).map((a: any) => String(a.doctorId)))]
+    : [];
+  const doctorProfiles = useQueries({
+    queries: doctorIds.map((id) => ({
+      queryKey: ['doctor', id],
+      queryFn: () => api<any>(`/doctors/${id}`),
+      staleTime: 60_000,
+    })),
+  });
+
   const open = async (id: string) => {
     setActive(id);
     setMsgPage(1);
@@ -78,6 +109,35 @@ function Chat() {
     if (h.length < MSG_LIMIT) setHasMore(false);
     socket?.emit('c:read', { conversationId: id });
   };
+
+  /**
+   * Open (or get) a conversation. Only the OTHER side is sent —
+   * the backend fills in me, and resolves doctor profile ids to user ids.
+   */
+  const createConv = async (peerId: string, kind: 'patient' | 'doctor') => {
+    const id = peerId.trim();
+    if (!id) return null;
+    setPeerError('');
+    try {
+      const conv = await api<any>('/conversations', {
+        method: 'POST',
+        body: JSON.stringify(kind === 'patient' ? { patientId: id } : { doctorId: id }),
+      });
+      if (conv?._id) {
+        setConvs((c) => (c.some((x) => x._id === conv._id) ? c : [conv, ...c]));
+        await open(conv._id);
+        setPeer('');
+        return conv;
+      }
+      return null;
+    } catch {
+      setPeerError(t.chat.noConvs);
+      return null;
+    }
+  };
+
+  // Manual id box: patients paste a doctor id, everyone else pastes a patient id.
+  const createManual = () => createConv(peer, iAmPatientOnly ? 'doctor' : 'patient');
 
   /** History is newest-first pages: prepend the next (older) page on top. */
   const loadOlder = async () => {
@@ -94,19 +154,6 @@ function Chat() {
       }
     } finally {
       setLoadingOlder(false);
-    }
-  };
-
-  const createConv = async () => {
-    if (!peer.trim()) return;
-    const conv = await api<any>('/conversations', {
-      method: 'POST',
-      body: JSON.stringify({ patientId: peer.trim(), doctorId: peer.trim() }),
-    }).catch(() => null);
-    if (conv?._id) {
-      setConvs((c) => [conv, ...c]);
-      open(conv._id);
-      setPeer('');
     }
   };
 
@@ -130,11 +177,59 @@ function Chat() {
         <Card className="mt-6 grid overflow-hidden md:grid-cols-3">
           {/* conversations */}
           <div className="border-b border-border/70 bg-muted/30 p-3 md:border-b-0 md:border-e">
-            <div className="flex gap-1.5" dir="ltr">
+            <p className="flex items-center gap-1.5 px-1 text-xs font-extrabold text-muted-foreground">
+              {iAmDoctor ? <Users className="size-3.5" /> : <Stethoscope className="size-3.5" />}
+              {t.chat.newChat}
+            </p>
+
+            {/* one-tap quick lists */}
+            {iAmDoctor && (
+              <div className="mt-2 max-h-44 space-y-1 overflow-auto">
+                {(patientsQ.data ?? []).map((p: any) => (
+                  <div key={p.patientId} className="flex items-center gap-2 rounded-lg bg-card p-1.5" dir="ltr">
+                    <Avatar className="size-7">
+                      <AvatarFallback className="text-[9px]">{initialsOf(p.email ?? p.phone)}</AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 flex-1 truncate text-xs font-bold">{p.email ?? p.phone ?? p.patientId}</span>
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => createConv(p.patientId, 'patient')}>
+                      {t.chat.startBtn}
+                    </Button>
+                  </div>
+                ))}
+                {(patientsQ.data ?? []).length === 0 && (
+                  <p className="p-2 text-[11px] text-muted-foreground">{t.doctor.noPatients}</p>
+                )}
+              </div>
+            )}
+            {iAmPatientOnly && (
+              <div className="mt-2 max-h-44 space-y-1 overflow-auto">
+                {doctorProfiles.map((dq: any, i: number) => {
+                  const d = dq.data;
+                  if (!d) return null;
+                  return (
+                    <div key={doctorIds[i]} className="flex items-center gap-2 rounded-lg bg-card p-1.5" dir="ltr">
+                      <Avatar className="size-7">
+                        <AvatarImage src={portraitFor(d._id, d.photoUrl)} alt="" />
+                        <AvatarFallback className="text-[9px]">{initialsOf(d.bio)}</AvatarFallback>
+                      </Avatar>
+                      <span className="min-w-0 flex-1 truncate text-xs font-bold">{d.bio || 'Doctor'}</span>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => createConv(d._id, 'doctor')}>
+                        {t.chat.startBtn}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* manual id fallback (profile or user id — backend resolves both) */}
+            <div className="mt-2 flex gap-1.5" dir="ltr">
               <Input value={peer} onChange={(e) => setPeer(e.target.value)} placeholder={t.chat.newConvPh} className="h-9 font-mono text-xs" />
-              <Button size="icon" onClick={createConv} className="shrink-0"><Plus /></Button>
+              <Button size="icon" onClick={createManual} className="shrink-0"><Plus /></Button>
             </div>
-            <div className="mt-2 max-h-72 space-y-1 overflow-auto md:max-h-[480px]">
+            {peerError && <p className="mt-1 px-1 text-[11px] font-semibold text-red-600">{peerError}</p>}
+
+            <div className="mt-2 max-h-72 space-y-1 overflow-auto border-t border-border/60 pt-2 md:max-h-[420px]">
               {convs.map((c: any) => {
                 const isOnline = presence[c.patientId] || presence[c.doctorId];
                 return (

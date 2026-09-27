@@ -335,6 +335,10 @@ const ar = {
   chat: {
     kicker: 'تواصل مباشر',
     title: 'الشات الطبي',
+    newChat: 'محادثة جديدة',
+    yourPatients: 'مرضاك — ابدأ الشات بضغطة',
+    yourDoctors: 'أطباءك — كمّل كلامك مع الدكتور',
+    startBtn: 'ابدأ',
     newConvPh: 'user id…',
     noConvs: 'مفيش محادثات — الصق user id وابدأ',
     selectConv: 'اختار محادثة',

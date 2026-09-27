@@ -339,6 +339,10 @@ const en: Dict = {
   chat: {
     kicker: 'Direct messaging',
     title: 'Medical chat',
+    newChat: 'New chat',
+    yourPatients: 'Your patients — start chatting in one tap',
+    yourDoctors: 'Your doctors — continue with your doctor',
+    startBtn: 'Start',
     newConvPh: 'user id…',
     noConvs: 'No conversations — paste a user id and start',
     selectConv: 'Select a conversation',
