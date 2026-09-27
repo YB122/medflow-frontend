@@ -50,6 +50,7 @@ function DoctorDashboard() {
   ]);
   const [noteForm, setNoteForm] = useState({ patientId: '', appointmentId: '', diagnosis: '', notes: '' });
   const [rxForm, setRxForm] = useState({ recordId: '', medication: '', dosage: '', instructions: '' });
+  const [rxPatientId, setRxPatientId] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState('');
@@ -114,9 +115,23 @@ function DoctorDashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['sched'] }),
   });
   const saveNote = useMutation({
-    mutationFn: () =>
-      api('/records', { method: 'POST', body: JSON.stringify({ ...noteForm, doctorId: doctorId || undefined }) }),
-    onSuccess: () => setNoteForm({ patientId: '', appointmentId: '', diagnosis: '', notes: '' }),
+    mutationFn: (snap: typeof noteForm) =>
+      api<any>('/records', {
+        method: 'POST',
+        body: JSON.stringify({ ...snap, appointmentId: snap.appointmentId || undefined, doctorId: doctorId || undefined }),
+      }),
+    onSuccess: (rec, snap) => {
+      setNoteForm({ patientId: '', appointmentId: '', diagnosis: '', notes: '' });
+      // Chain straight into a prescription: preselect the patient + fresh record.
+      setRxPatientId(snap.patientId);
+      if (rec?._id) setRxForm((f) => ({ ...f, recordId: rec._id }));
+      qc.invalidateQueries({ queryKey: ['patient-records'] });
+    },
+  });
+  const rxRecordsQ = useQuery({
+    queryKey: ['patient-records', rxPatientId],
+    queryFn: () => api<{ items: any[] }>(`/records/patient/${rxPatientId}?limit=50`),
+    enabled: !!rxPatientId,
   });
   const saveRx = useMutation({
     mutationFn: () =>
@@ -500,11 +515,36 @@ function DoctorDashboard() {
                 <CardDescription>{t.doctor.noteSub}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2.5" dir="ltr">
-                <Input value={noteForm.patientId} onChange={(e) => setNoteForm({ ...noteForm, patientId: e.target.value })} placeholder={t.doctor.patientIdPh} className="font-mono text-xs" />
-                <Input value={noteForm.appointmentId} onChange={(e) => setNoteForm({ ...noteForm, appointmentId: e.target.value })} placeholder={t.doctor.apptIdPh} className="font-mono text-xs" />
+                <select
+                  value={noteForm.patientId}
+                  onChange={(e) => setNoteForm({ ...noteForm, patientId: e.target.value, appointmentId: '' })}
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">{t.doctor.selPatient}</option>
+                  {(patientsQ.data ?? []).map((p: any) => (
+                    <option key={p.patientId} value={p.patientId}>
+                      {p.email ?? p.phone ?? p.patientId}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={noteForm.appointmentId}
+                  onChange={(e) => setNoteForm({ ...noteForm, appointmentId: e.target.value })}
+                  disabled={!noteForm.patientId}
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                >
+                  <option value="">{t.doctor.selAppt}</option>
+                  {(statsQ.data?.items ?? [])
+                    .filter((a: any) => String(a.patientId) === noteForm.patientId)
+                    .map((a: any) => (
+                      <option key={a._id} value={a._id}>
+                        {a.date} {a.start} · {a.status}
+                      </option>
+                    ))}
+                </select>
                 <Input value={noteForm.diagnosis} onChange={(e) => setNoteForm({ ...noteForm, diagnosis: e.target.value })} placeholder={t.doctor.diagnosisPh} />
                 <Textarea value={noteForm.notes} onChange={(e) => setNoteForm({ ...noteForm, notes: e.target.value })} placeholder={t.doctor.notesPh} />
-                <Button onClick={() => saveNote.mutate()} disabled={saveNote.isPending} className="w-full"><Save /> {t.doctor.saveNote}</Button>
+                <Button onClick={() => saveNote.mutate({ ...noteForm })} disabled={!noteForm.patientId || saveNote.isPending} className="w-full"><Save /> {t.doctor.saveNote}</Button>
                 {saveNote.isSuccess && <p className="text-sm font-semibold text-emerald-700">{t.doctor.noteSaved}</p>}
               </CardContent>
             </Card>
@@ -514,13 +554,45 @@ function DoctorDashboard() {
                 <CardDescription>{t.doctor.rxSub}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2.5" dir="ltr">
-                <Input value={rxForm.recordId} onChange={(e) => setRxForm({ ...rxForm, recordId: e.target.value })} placeholder={t.doctor.recordIdPh} className="font-mono text-xs" />
+                <select
+                  value={rxPatientId}
+                  onChange={(e) => {
+                    setRxPatientId(e.target.value);
+                    setRxForm((f) => ({ ...f, recordId: '' }));
+                  }}
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">{t.doctor.selPatient}</option>
+                  {(patientsQ.data ?? []).map((p: any) => (
+                    <option key={p.patientId} value={p.patientId}>
+                      {p.email ?? p.phone ?? p.patientId}
+                    </option>
+                  ))}
+                </select>
+                {rxPatientId && (
+                  (rxRecordsQ.data?.items ?? []).length > 0 ? (
+                    <select
+                      value={rxForm.recordId}
+                      onChange={(e) => setRxForm({ ...rxForm, recordId: e.target.value })}
+                      className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">{t.doctor.selRecord}</option>
+                      {(rxRecordsQ.data?.items ?? []).map((r: any) => (
+                        <option key={r._id} value={r._id}>
+                          {(r.diagnosis || (r.notes ?? '').slice(0, 30) || r._id).slice(0, 40)} · {String(r.createdAt ?? '').slice(0, 10)}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="rounded-lg bg-amber-50 p-2.5 text-xs leading-5 text-amber-800">{t.doctor.noRecords}</p>
+                  )
+                )}
                 <Input value={rxForm.medication} onChange={(e) => setRxForm({ ...rxForm, medication: e.target.value })} placeholder={t.doctor.medPh} />
                 <div className="grid grid-cols-2 gap-2.5">
                   <Input value={rxForm.dosage} onChange={(e) => setRxForm({ ...rxForm, dosage: e.target.value })} placeholder={t.doctor.dosagePh} />
                   <Input value={rxForm.instructions} onChange={(e) => setRxForm({ ...rxForm, instructions: e.target.value })} placeholder={t.doctor.instrPh} />
                 </div>
-                <Button onClick={() => saveRx.mutate()} disabled={saveRx.isPending} className="w-full"><Pill /> {t.doctor.saveRx}</Button>
+                <Button onClick={() => saveRx.mutate()} disabled={!rxForm.recordId || saveRx.isPending} className="w-full"><Pill /> {t.doctor.saveRx}</Button>
                 {saveRx.isSuccess && <p className="text-sm font-semibold text-emerald-700">{t.doctor.rxSaved}</p>}
               </CardContent>
             </Card>
