@@ -8,7 +8,7 @@ import {
   ShieldCheck, UserX, UserCheck, Check, ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import { api } from '@/lib/store';
-import { portraitFor, initialsOf } from '@/lib/doctors';
+import { portraitFor, initialsOf, specName } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,7 +56,7 @@ function Detail({ id }: { id: string }) {
   const user = d && typeof d.userId === 'object' ? d.userId : null;
   const uid: string | undefined = user?._id ?? (typeof d?.userId === 'string' ? d.userId : undefined);
   const byStatus: Record<string, number> = q.data?.stats?.byStatus ?? {};
-  const specialty = typeof d?.specialtyId === 'object' ? d.specialtyId?.name : null;
+  const specialty = d?.specialtyId && typeof d.specialtyId === 'object' ? d.specialtyId : null;
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -106,7 +106,7 @@ function Detail({ id }: { id: string }) {
                   {[user?.email, user?.phone].filter(Boolean).join(' · ') || '—'}
                 </p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                  {specialty && <span>{specialty}</span>}
+                  {specialty && <span>{specName(specialty, locale)}</span>}
                   {d.city && <span className="flex items-center gap-1"><MapPin className="size-3.5" /> {d.city}</span>}
                   {d.price != null && <span className="font-bold text-primary" dir="ltr">${d.price}</span>}
                   {d.yearsOfExperience != null && (

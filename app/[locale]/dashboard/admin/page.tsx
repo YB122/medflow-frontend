@@ -8,7 +8,7 @@ import {
   UserX, UserCheck, ShieldCheck, BadgeCheck, Trophy, BarChart3, Plus, Check,
 } from 'lucide-react';
 import { api } from '@/lib/store';
-import { portraitFor, initialsOf } from '@/lib/doctors';
+import { portraitFor, initialsOf, specName } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,7 +61,8 @@ function AdminDashboard() {
   const USER_LIMIT = 20;
   const [docPage, setDocPage] = useState(1);
   const DOC_LIMIT = 10;
-  const [specName, setSpecName] = useState('');
+  const [specNameEn, setSpecNameEn] = useState('');
+  const [specNameAr, setSpecNameAr] = useState('');
   const dash = useQuery({ queryKey: ['admin-dash'], queryFn: () => api<any>('/admin/dashboard') });
   const monthly = useQuery({ queryKey: ['admin-monthly'], queryFn: () => api<any>('/admin/reports/monthly') });
   const top = useQuery({ queryKey: ['admin-top'], queryFn: () => api<any[]>('/admin/reports/top-doctors') });
@@ -90,9 +91,14 @@ function AdminDashboard() {
     onSuccess: refreshAll,
   });
   const addSpec = useMutation({
-    mutationFn: () => api('/specialties', { method: 'POST', body: JSON.stringify({ name: specName.trim() }) }),
+    mutationFn: () =>
+      api('/specialties', {
+        method: 'POST',
+        body: JSON.stringify({ name: specNameEn.trim(), nameAr: specNameAr.trim() }),
+      }),
     onSuccess: () => {
-      setSpecName('');
+      setSpecNameEn('');
+      setSpecNameAr('');
       qc.invalidateQueries({ queryKey: ['specs'] });
       qc.invalidateQueries({ queryKey: ['admin-doctors'] });
     },
@@ -232,7 +238,7 @@ function AdminDashboard() {
                     {[d.userId?.email, d.userId?.phone].filter(Boolean).join(' · ') || '—'}
                   </p>
                   <p className="truncate text-[11px] text-muted-foreground">
-                    {[d.specialtyId?.name, d.city, d.price != null ? `$${d.price}` : null].filter(Boolean).join(' · ')}
+                    {[specName(d.specialtyId, locale), d.city, d.price != null ? `$${d.price}` : null].filter(Boolean).join(' · ')}
                   </p>
                 </div>
               </Link>
@@ -258,20 +264,31 @@ function AdminDashboard() {
         <CardContent>
           <div className="flex flex-wrap gap-1.5">
             {(specs.data ?? []).map((s: any) => (
-              <Badge key={s._id} variant="secondary" dir="ltr">{s.name}</Badge>
+              <Badge key={s._id} variant="secondary" dir="ltr">
+                {s.name}{s.nameAr ? ` · ${s.nameAr}` : ''}
+              </Badge>
             ))}
             {(specs.data ?? []).length === 0 && (
               <span className="text-xs text-muted-foreground">{t.admin.noData}</span>
             )}
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <Input
-              value={specName}
-              onChange={(e) => setSpecName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && specName.trim() && addSpec.mutate()}
+              value={specNameEn}
+              onChange={(e) => setSpecNameEn(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && specNameEn.trim() && addSpec.mutate()}
               placeholder={t.admin.specPh}
+              dir="ltr"
             />
-            <Button disabled={!specName.trim() || addSpec.isPending} onClick={() => addSpec.mutate()} className="shrink-0">
+            <Input
+              value={specNameAr}
+              onChange={(e) => setSpecNameAr(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && specNameEn.trim() && addSpec.mutate()}
+              placeholder={t.admin.specPhAr}
+            />
+          </div>
+          <div className="mt-2">
+            <Button disabled={!specNameEn.trim() || addSpec.isPending} onClick={() => addSpec.mutate()} className="shrink-0">
               <Plus /> {t.admin.specAdd}
             </Button>
           </div>

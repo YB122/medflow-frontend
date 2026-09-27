@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Search, MapPin, Wallet, Star, BadgeCheck, SlidersHorizontal, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/store';
-import { portraitFor, initialsOf } from '@/lib/doctors';
+import { portraitFor, initialsOf, specName } from '@/lib/doctors';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -86,7 +86,7 @@ export default function DoctorsPage() {
             >
               <option value="">{t.doctors.allSpecs}</option>
               {(specs.data ?? []).map((s: any) => (
-                <option key={s._id} value={s._id}>{s.name}</option>
+                <option key={s._id} value={s._id}>{specName(s, locale)}</option>
               ))}
             </select>
             <div className="relative">

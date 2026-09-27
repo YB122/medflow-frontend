@@ -8,7 +8,7 @@ import {
   CheckCircle2, XCircle, Send, MessageSquareHeart, ClipboardList, Award,
 } from 'lucide-react';
 import { api, useAuth } from '@/lib/store';
-import { portraitFor, initialsOf } from '@/lib/doctors';
+import { portraitFor, initialsOf, specName } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,10 +16,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useT } from '@/components/i18n-provider';
+import { useT, useLocale } from '@/components/i18n-provider';
 
 export default function DoctorProfile({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const t = useT();
+  const locale = useLocale();
   const { id } = use(params);
   const qc = useQueryClient();
   const roles = useAuth((s) => s.roles);
@@ -92,7 +93,7 @@ export default function DoctorProfile({ params }: { params: Promise<{ locale: st
                   <span className="flex items-center gap-1 font-bold text-primary" dir="ltr">
                     <Wallet className="size-4" /> ${d.price ?? '—'} {t.common.perVisit}
                   </span>
-                  {d.specialtyId?.name && <Badge variant="secondary">{d.specialtyId.name}</Badge>}
+                  {d.specialtyId && <Badge variant="secondary">{specName(d.specialtyId, locale)}</Badge>}
                   {d.yearsOfExperience != null && (
                     <span className="flex items-center gap-1 font-semibold text-foreground" dir="ltr">
                       <Award className="size-4 text-primary" /> {d.yearsOfExperience} {t.profile.expSuffix}

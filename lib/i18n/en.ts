@@ -272,6 +272,7 @@ const en: Dict = {
     specTitle: 'Manage specialties',
     specSub: 'New specialties appear instantly in the doctor dropdown',
     specPh: 'New specialty name…',
+    specPhAr: 'Arabic name (optional)…',
     specAdd: 'Add specialty',
     specAdded: 'Added successfully',
     specErr: 'Add failed — name is required',

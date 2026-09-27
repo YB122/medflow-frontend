@@ -20,3 +20,11 @@ export function initialsOf(name: string | undefined | null): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((p) => p[0]).join('').toUpperCase();
 }
+
+/** Localized specialty name (Arabic when available, English fallback). */
+export function specName(s: any, locale: string): string {
+  if (!s) return '';
+  if (typeof s === 'string') return s;
+  if (locale === 'ar' && s.nameAr) return s.nameAr;
+  return s.name ?? '';
+}

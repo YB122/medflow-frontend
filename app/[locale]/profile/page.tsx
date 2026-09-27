@@ -8,7 +8,7 @@ import {
   Stethoscope, Wallet, Building2, CalendarDays, Award,
 } from 'lucide-react';
 import { api, useAuth, uploadDoctorPhoto, uploadMyPhoto } from '@/lib/store';
-import { portraitFor, initialsOf } from '@/lib/doctors';
+import { portraitFor, initialsOf, specName } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/status-badge';
 import { RequireRole } from '@/components/require-role';
-import { useT } from '@/components/i18n-provider';
+import { useT, useLocale } from '@/components/i18n-provider';
 
 // Leaflet touches `window` — never render on the server.
 const LocationPicker = dynamic(
@@ -46,6 +46,7 @@ export default function ProfilePage() {
 
 function Profile() {
   const t = useT();
+  const locale = useLocale();
   const qc = useQueryClient();
   const roles = useAuth((s) => s.roles);
   const isDoctor = roles.includes('DOCTOR');
@@ -328,7 +329,7 @@ function Profile() {
                         >
                           <option value="">{t.account.noSpecialty}</option>
                           {(specsQ.data ?? []).map((s: any) => (
-                            <option key={s._id} value={s._id}>{s.name}</option>
+                            <option key={s._id} value={s._id}>{specName(s, locale)}</option>
                           ))}
                         </select>
                       </div>
