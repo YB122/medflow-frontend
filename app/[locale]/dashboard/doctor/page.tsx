@@ -8,9 +8,9 @@ import {
   CalendarDays, Clock, Check, X, Plus, Trash2, Save,
   ClipboardList, Pill, CalendarClock, CircleCheck, Hourglass,
   MessageCircle, Stethoscope, ChevronRight, ChevronLeft,
-  Camera, Upload, UserRound, Users, FilePlus2,
+  Camera, Upload, UserRound, Users, FilePlus2, Briefcase, Mail, Lock, UserX,
 } from 'lucide-react';
-import { api, uploadDoctorPhoto } from '@/lib/store';
+import { api, useAuth, uploadDoctorPhoto } from '@/lib/store';
 import { portraitFor, initialsOf } from '@/lib/doctors';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ const APPT_LIMIT = 6;
 
 export default function DoctorDashboardPage() {
   return (
-    <RequireRole allow={['DOCTOR', 'ADMIN', 'SUPER_ADMIN']}>
+    <RequireRole allow={['DOCTOR', 'ADMIN', 'SUPER_ADMIN', 'STAFF']}>
       <DoctorDashboard />
     </RequireRole>
   );
@@ -42,6 +42,10 @@ function DoctorDashboard() {
   const L = (p: string) => `/${locale}${p}`;
   const Back = locale === 'ar' ? ChevronRight : ChevronLeft;
   const qc = useQueryClient();
+  const myRoles = useAuth((s) => s.roles);
+  // STAFF see a limited workspace: the booking queue only (no schedule/records/team/photo).
+  const isStaffView =
+    myRoles.includes('STAFF') && !myRoles.some((r) => ['DOCTOR', 'ADMIN', 'SUPER_ADMIN'].includes(r));
   const [doctorId, setDoctorId] = useState('');
   const [windows, setWindows] = useState<Window[]>([
     { dayOfWeek: 1, start: '09:00', end: '13:00', slotMinutes: 30 },
@@ -76,9 +80,11 @@ function DoctorDashboard() {
     enabled: !!doctorId,
   });
   // Resolve the logged-in doctor's own profile so schedule/photo/notes just work.
+  // (Staff accounts have no profile — skip the call for them.)
   const myProfile = useQuery({
     queryKey: ['my-doctor-profile'],
     queryFn: () => api<any>('/doctors/me'),
+    enabled: !isStaffView,
   });
   useEffect(() => {
     const id = myProfile.data?._id;
@@ -102,6 +108,30 @@ function DoctorDashboard() {
   const patientsQ = useQuery({
     queryKey: ['my-patients'],
     queryFn: () => api<any[]>('/doctors/me/patients'),
+    enabled: !isStaffView,
+  });
+  const [staffEmail, setStaffEmail] = useState('');
+  const [staffPass, setStaffPass] = useState('');
+  const staffQ = useQuery({
+    queryKey: ['my-staff'],
+    queryFn: () => api<any[]>('/doctors/me/staff'),
+    enabled: !isStaffView,
+  });
+  const inviteStaff = useMutation({
+    mutationFn: () =>
+      api('/doctors/me/staff', {
+        method: 'POST',
+        body: JSON.stringify({ email: staffEmail.trim(), password: staffPass }),
+      }),
+    onSuccess: () => {
+      setStaffEmail('');
+      setStaffPass('');
+      qc.invalidateQueries({ queryKey: ['my-staff'] });
+    },
+  });
+  const removeStaff = useMutation({
+    mutationFn: (uid: string) => api(`/doctors/me/staff/${uid}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-staff'] }),
   });
 
   /** Jump to the records tab with the patient prefilled for a new note. */
@@ -228,7 +258,8 @@ function DoctorDashboard() {
         ))}
       </div>
 
-      {/* ---------- PROFILE PHOTO ---------- */}
+      {/* ---------- PROFILE PHOTO (doctors only) ---------- */}
+      {!isStaffView && (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}>
         <Card className="mt-5">
           <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
@@ -276,6 +307,7 @@ function DoctorDashboard() {
           </CardContent>
         </Card>
       </motion.div>
+      )}
 
       <Tabs value={tab} onValueChange={setTab} className="mt-6">
         <TabsList>
@@ -283,9 +315,10 @@ function DoctorDashboard() {
             <Hourglass /> {t.doctor.tabRequests}
             {pending.length > 0 && <Badge variant="destructive" className="px-1.5" dir="ltr">{pending.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="patients"><Users /> {t.doctor.tabPatients}</TabsTrigger>
-          <TabsTrigger value="schedule"><CalendarClock /> {t.doctor.tabSchedule}</TabsTrigger>
-          <TabsTrigger value="records"><ClipboardList /> {t.doctor.tabRecords}</TabsTrigger>
+          {!isStaffView && <TabsTrigger value="patients"><Users /> {t.doctor.tabPatients}</TabsTrigger>}
+          {!isStaffView && <TabsTrigger value="staff"><Briefcase /> {t.doctor.tabStaff}</TabsTrigger>}
+          {!isStaffView && <TabsTrigger value="schedule"><CalendarClock /> {t.doctor.tabSchedule}</TabsTrigger>}
+          {!isStaffView && <TabsTrigger value="records"><ClipboardList /> {t.doctor.tabRecords}</TabsTrigger>}
         </TabsList>
 
         {/* ---------- REQUESTS ---------- */}
@@ -373,7 +406,8 @@ function DoctorDashboard() {
           {decide.isError && <p className="mt-3 text-sm font-semibold text-red-600">{t.doctor.actionErr}</p>}
         </TabsContent>
 
-        {/* ---------- PATIENTS ---------- */}
+        {/* ---------- PATIENTS (doctors only) ---------- */}
+        {!isStaffView && (
         <TabsContent value="patients">
           {patientsQ.isLoading ? (
             <div className="grid gap-3 md:grid-cols-2">{[0, 1, 2, 3].map((i) => (<Skeleton key={i} className="h-28" />))}</div>
@@ -433,8 +467,85 @@ function DoctorDashboard() {
             </div>
           )}
         </TabsContent>
+        )}
 
-        {/* ---------- SCHEDULE ---------- */}
+        {/* ---------- STAFF (doctors only) ---------- */}
+        {!isStaffView && (
+        <TabsContent value="staff">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Briefcase className="size-5 text-primary" /> {t.doctor.tabStaff}</CardTitle>
+              <CardDescription>{t.doctor.staffSub}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2.5 sm:grid-cols-[1fr_1fr_auto]" dir="ltr">
+                <div className="relative">
+                  <Mail className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={staffEmail}
+                    onChange={(e) => setStaffEmail(e.target.value)}
+                    placeholder={t.doctor.staffEmailPh}
+                    className="ps-9"
+                    inputMode="email"
+                  />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={staffPass}
+                    onChange={(e) => setStaffPass(e.target.value)}
+                    placeholder={t.doctor.staffPassPh}
+                    type="password"
+                    className="ps-9"
+                  />
+                </div>
+                <Button
+                  disabled={!staffEmail.trim() || staffPass.length < 8 || inviteStaff.isPending}
+                  onClick={() => inviteStaff.mutate()}
+                >
+                  <Plus /> {t.doctor.staffInvite}
+                </Button>
+              </div>
+              {inviteStaff.isSuccess && (
+                <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-emerald-700">
+                  <Check className="size-4" /> {t.doctor.staffAdded}
+                </p>
+              )}
+              {inviteStaff.isError && (
+                <p className="mt-2 text-sm font-semibold text-red-600">{t.doctor.staffErr}</p>
+              )}
+              <div className="mt-4 space-y-2">
+                {(staffQ.data ?? []).map((m: any) => (
+                  <div key={m.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-2.5" dir="ltr">
+                    <Avatar className="size-8">
+                      <AvatarFallback className="text-[10px]">{initialsOf(m.email)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold">{m.email}</p>
+                      <p className="text-[11px] text-muted-foreground"><StatusBadge status={m.status} /></p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                      disabled={removeStaff.isPending}
+                      onClick={() => removeStaff.mutate(m.id)}
+                    >
+                      <UserX /> {t.doctor.staffRemove}
+                    </Button>
+                  </div>
+                ))}
+                {(staffQ.data ?? []).length === 0 && !staffQ.isLoading && (
+                  <p className="py-3 text-center text-sm text-muted-foreground">{t.doctor.staffEmpty}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        )}
+
+        {/* ---------- SCHEDULE (doctors only) ---------- */}
+        {!isStaffView && (
         <TabsContent value="schedule">
           <Card>
             <CardHeader>
@@ -505,8 +616,10 @@ function DoctorDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
-        {/* ---------- RECORDS ---------- */}
+        {/* ---------- RECORDS (doctors only) ---------- */}
+        {!isStaffView && (
         <TabsContent value="records">
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
@@ -598,6 +711,7 @@ function DoctorDashboard() {
             </Card>
           </div>
         </TabsContent>
+        )}
       </Tabs>
     </main>
   );

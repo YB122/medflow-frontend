@@ -10,7 +10,7 @@ import { Skeleton } from './ui/skeleton';
 /** Where to send a user whose role doesn't belong on the current page. */
 function homeFor(roles: string[], locale: string): string {
   if (roles.includes('PATIENT')) return `/${locale}/dashboard/patient`;
-  if (roles.includes('DOCTOR')) return `/${locale}/dashboard/doctor`;
+  if (roles.includes('DOCTOR') || roles.includes('STAFF')) return `/${locale}/dashboard/doctor`;
   if (roles.includes('ADMIN') || roles.includes('SUPER_ADMIN')) return `/${locale}/dashboard/admin`;
   return `/${locale}/doctors`;
 }
