@@ -427,20 +427,20 @@ function DoctorDashboard() {
               <CardDescription>{t.doctor.schedSub}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  value={doctorId}
-                  onChange={(e) => setDoctorId(e.target.value)}
-                  placeholder={t.doctor.profileIdPh}
-                  dir="ltr"
-                  className="font-mono text-xs"
-                />
-                {doctorId && (
+              {doctorId ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="success" className="gap-1.5 px-3 py-1.5">
+                    <Check className="size-3.5" /> {t.doctor.profileAuto}
+                  </Badge>
                   <Link href={L(`/doctors/${doctorId}`)}>
                     <Button variant="outline" size="sm" className="whitespace-nowrap">{t.doctor.previewMine} <Back className="size-4" /></Button>
                   </Link>
-                )}
-              </div>
+                </div>
+              ) : myProfile.isLoading ? (
+                <Skeleton className="h-9 w-56" />
+              ) : (
+                <p className="rounded-lg bg-amber-50 p-2.5 text-xs leading-5 text-amber-800">{t.doctor.noLinkedProfile}</p>
+              )}
               {sched.data && (
                 <p className="mt-3 rounded-lg bg-muted/60 p-2.5 text-xs leading-6" dir="ltr">
                   {t.doctor.currentPrefix} {sched.data.map((w) => `${t.days[w.dayOfWeek]} ${w.start}-${w.end}`).join(' · ') || '—'}

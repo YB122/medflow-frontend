@@ -190,6 +190,8 @@ const en: Dict = {
     schedTitle: 'Weekly working hours',
     schedSub: 'Set patient visiting days & hours — patients only see free slots',
     profileIdPh: 'Paste doctor profile id here…',
+    profileAuto: 'Your profile is linked automatically',
+    noLinkedProfile: 'No doctor profile is linked to your account — sign up as a doctor or contact support',
     previewMine: 'Preview my page',
     currentPrefix: 'current:',
     winUnit: 'min',

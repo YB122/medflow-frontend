@@ -187,6 +187,8 @@ const ar = {
     schedTitle: 'جدول العمل الأسبوعي',
     schedSub: 'حدد أيام وساعات استقبال المرضى — المرضى هيشوفوا الslots الفاضية بس',
     profileIdPh: 'الصق doctor profile id هنا…',
+    profileAuto: 'ملفك مربوط تلقائياً',
+    noLinkedProfile: 'لا يوجد ملف دكتور مربوط بحسابك — سجّل كدكتور أو كلم الإدارة',
     previewMine: 'معاينة صفحتي',
     currentPrefix: 'current:',
     winUnit: 'min',
