@@ -109,6 +109,8 @@ const en: Dict = {
   profile: {
     verifiedDoctor: 'Verified doctor',
     expSuffix: 'yrs experience',
+    clinicLocation: 'Clinic location',
+    openInMaps: 'Open in Google Maps',
     weeklySchedule: 'Weekly working hours',
     bookTitle: 'Book your slot',
     bookSubChosen: 'free slots on the selected day',

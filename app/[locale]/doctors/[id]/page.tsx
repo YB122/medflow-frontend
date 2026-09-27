@@ -1,4 +1,5 @@
 'use client';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { use, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +18,12 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useT, useLocale } from '@/components/i18n-provider';
+
+// Read-only map (Leaflet needs window) — only rendered when coordinates exist.
+const LocationView = dynamic(
+  () => import('@/components/location-view').then((m) => m.LocationView),
+  { ssr: false, loading: () => <Skeleton className="h-56 w-full" /> },
+);
 
 export default function DoctorProfile({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const t = useT();
@@ -197,6 +204,33 @@ export default function DoctorProfile({ params }: { params: Promise<{ locale: st
                       <span className="text-muted-foreground">{w.start} – {w.end}</span>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ---------- CLINIC LOCATION ---------- */}
+          {d?.lat != null && d?.lng != null && (
+            <Card className="mt-5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="size-5 text-primary" /> {t.profile.clinicLocation}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LocationView lat={d.lat} lng={d.lng} />
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono text-xs text-muted-foreground" dir="ltr">
+                    {d.lat}, {d.lng}
+                  </span>
+                  <a
+                    href={`https://www.google.com/maps?q=${d.lat},${d.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-primary hover:underline"
+                  >
+                    {t.profile.openInMaps} ↗
+                  </a>
                 </div>
               </CardContent>
             </Card>

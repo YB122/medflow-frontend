@@ -107,6 +107,8 @@ const ar = {
   profile: {
     verifiedDoctor: 'طبيب موثّق',
     expSuffix: 'سنين خبرة',
+    clinicLocation: 'موقع العيادة',
+    openInMaps: 'افتح في خرائط جوجل',
     weeklySchedule: 'جدول العمل الأسبوعي',
     bookTitle: 'احجز معادك',
     bookSubChosen: 'معاد متاح في اليوم المختار',
